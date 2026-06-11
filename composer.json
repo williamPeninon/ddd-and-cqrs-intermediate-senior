@@ -16,7 +16,9 @@
   },
   "autoload": {
     "psr-4": {
-      "FleetParking\\": "src/"
+      "FleetParking\\Domain\\": "Domain/",
+      "FleetParking\\App\\": "App/",
+      "FleetParking\\Infra\\": "src/Infra/"
     }
   },
   "autoload-dev": {
