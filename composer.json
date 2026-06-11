@@ -1,0 +1,33 @@
+{
+  "name": "wpeninon/fleet-parking-ddd-cqrs",
+  "description": "Vehicle fleet parking management - DDD/CQRS/BDD kata",
+  "type": "project",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.2",
+    "ext-pdo": "*",
+    "ext-json": "*"
+  },
+  "require-dev": {
+    "behat/behat": "^3.15",
+    "phpunit/phpunit": "^11.0",
+    "phpstan/phpstan": "^1.11",
+    "friendsofphp/php-cs-fixer": "^3.64"
+  },
+  "autoload": {
+    "psr-4": {
+      "FleetParking\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "FleetParking\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test:bdd": "behat",
+    "test:unit": "phpunit",
+    "analyse": "phpstan analyse src --level=8",
+    "cs:fix": "php-cs-fixer fix --allow-risky=yes"
+  }
+}
