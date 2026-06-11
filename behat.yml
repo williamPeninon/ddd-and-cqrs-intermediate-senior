@@ -1,0 +1,12 @@
+default:
+  suites:
+    domain:
+      paths: [ '%paths.base%/features' ]
+      contexts: [ FeatureContext ]
+      filters:
+        tags: '~@infra'
+    infra:
+      paths: [ '%paths.base%/features' ]
+      contexts: [ FeatureContext ]
+      filters:
+        tags: '@infra'

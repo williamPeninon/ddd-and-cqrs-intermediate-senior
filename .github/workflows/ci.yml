@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_pgsql
+          coverage: none
+
+      - run: composer install --no-interaction --prefer-dist
+
+      - run: vendor/bin/php-cs-fixer fix --dry-run --diff
+
+      - run: vendor/bin/phpstan analyse src --level=8
+
+      - run: vendor/bin/phpunit --testsuite Unit
+
+  bdd-domain:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - run: composer install --no-interaction --prefer-dist
+
+      - run: vendor/bin/behat --suite=domain
+
+  integration:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: fleet
+          POSTGRES_USER: fleet
+          POSTGRES_PASSWORD: fleet
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fleet -d fleet"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_DSN: pgsql:host=127.0.0.1;port=5432;dbname=fleet
+      DATABASE_USER: fleet
+      DATABASE_PASSWORD: fleet
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_pgsql
+          coverage: none
+
+      - run: composer install --no-interaction --prefer-dist
+
+      - name: Apply database migration
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          PGPASSWORD=fleet psql -h 127.0.0.1 -U fleet -d fleet -f migrations/001_init.sql
+
+      - run: vendor/bin/phpunit --testsuite Integration
+
+      - run: vendor/bin/behat --suite=infra

@@ -1,0 +1,125 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use FleetParking\App\Cli\JsonOutput;
+use FleetParking\App\Command\CreateFleetCommand;
+use FleetParking\App\Command\ParkVehicleCommand;
+use FleetParking\App\Command\RegisterVehicleCommand;
+use FleetParking\App\Handler\CreateFleetHandler;
+use FleetParking\App\Handler\ListAllDataHandler;
+use FleetParking\App\Handler\ListFleetVehiclesHandler;
+use FleetParking\App\Handler\ListFleetsHandler;
+use FleetParking\App\Handler\ListVehicleLocationsHandler;
+use FleetParking\App\Handler\ListVehiclesHandler;
+use FleetParking\App\Handler\ParkVehicleHandler;
+use FleetParking\App\Handler\RegisterVehicleHandler;
+use FleetParking\App\Query\ListAllDataQuery;
+use FleetParking\App\Query\ListFleetVehiclesQuery;
+use FleetParking\App\Query\ListFleetsQuery;
+use FleetParking\App\Query\ListVehicleLocationsQuery;
+use FleetParking\App\Query\ListVehiclesQuery;
+use FleetParking\Infra\Postgres\PdoFactory;
+use FleetParking\Infra\Postgres\PostgresFleetReadRepository;
+use FleetParking\Infra\Postgres\PostgresFleetRepository;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+$command = $argv[1] ?? null;
+$pdo = PdoFactory::fromEnvironment();
+$repository = new PostgresFleetRepository($pdo);
+$readRepository = new PostgresFleetReadRepository($pdo);
+
+try {
+    switch ($command) {
+        case 'create':
+            $userId = $argv[2] ?? null;
+            if (!$userId) {
+                throw new InvalidArgumentException('Usage: ./fleet create <userId>');
+            }
+            $fleetId = (new CreateFleetHandler($repository))(new CreateFleetCommand($userId));
+            echo $fleetId . PHP_EOL;
+            break;
+
+        case 'register-vehicle':
+            [$fleetId, $plate] = [$argv[2] ?? null, $argv[3] ?? null];
+            if (!$fleetId || !$plate) {
+                throw new InvalidArgumentException('Usage: ./fleet register-vehicle <fleetId> <vehiclePlateNumber>');
+            }
+            (new RegisterVehicleHandler($repository))(new RegisterVehicleCommand($fleetId, $plate));
+            echo 'Vehicle registered.' . PHP_EOL;
+            break;
+
+        case 'localize-vehicle':
+            [$fleetId, $plate, $lat, $lng, $alt] = [
+                $argv[2] ?? null,
+                $argv[3] ?? null,
+                $argv[4] ?? null,
+                $argv[5] ?? null,
+                $argv[6] ?? null,
+            ];
+            if (!$fleetId || !$plate || $lat === null || $lng === null) {
+                throw new InvalidArgumentException('Usage: ./fleet localize-vehicle <fleetId> <vehiclePlateNumber> lat lng [alt]');
+            }
+            (new ParkVehicleHandler($repository))(new ParkVehicleCommand(
+                $fleetId,
+                $plate,
+                (float) $lat,
+                (float) $lng,
+                $alt === null ? null : (float) $alt,
+            ));
+            echo 'Vehicle localized.' . PHP_EOL;
+            break;
+
+        case 'list-fleets':
+            $ownerId = $argv[2] ?? null;
+            $fleets = (new ListFleetsHandler($readRepository))(new ListFleetsQuery($ownerId));
+            echo JsonOutput::encode($fleets);
+            break;
+
+        case 'list-vehicles':
+            $vehicles = (new ListVehiclesHandler($readRepository))(new ListVehiclesQuery());
+            echo JsonOutput::encode($vehicles);
+            break;
+
+        case 'list-fleet-vehicles':
+            $fleetId = $argv[2] ?? null;
+            $fleetVehicles = (new ListFleetVehiclesHandler($readRepository))(new ListFleetVehiclesQuery($fleetId));
+            echo JsonOutput::encode($fleetVehicles);
+            break;
+
+        case 'list-locations':
+        case 'list-parkings':
+        case 'list-positions':
+            $fleetId = $argv[2] ?? null;
+            $locations = (new ListVehicleLocationsHandler($readRepository))(new ListVehicleLocationsQuery($fleetId));
+            echo JsonOutput::encode($locations);
+            break;
+
+        case 'list-all':
+            $ownerId = $argv[2] ?? null;
+            $fleetId = $argv[3] ?? null;
+            $data = (new ListAllDataHandler($readRepository))(new ListAllDataQuery($ownerId, $fleetId));
+            echo JsonOutput::encode($data);
+            break;
+
+        default:
+            echo "Vehicle fleet parking CLI\n";
+            echo "Usage:\n";
+            echo "  ./fleet create <userId>\n";
+            echo "  ./fleet register-vehicle <fleetId> <vehiclePlateNumber>\n";
+            echo "  ./fleet localize-vehicle <fleetId> <vehiclePlateNumber> lat lng [alt]\n";
+            echo "  ./fleet list-fleets [userId]\n";
+            echo "  ./fleet list-vehicles\n";
+            echo "  ./fleet list-fleet-vehicles [fleetId]\n";
+            echo "  ./fleet list-locations [fleetId]\n";
+            echo "  ./fleet list-parkings [fleetId]\n";
+            echo "  ./fleet list-positions [fleetId]\n";
+            echo "  ./fleet list-all [userId] [fleetId]\n";
+            exit($command === null ? 0 : 1);
+    }
+} catch (Throwable $exception) {
+    fwrite(STDERR, $exception->getMessage() . PHP_EOL);
+    exit(1);
+}
