@@ -15,14 +15,18 @@ declare(strict_types=1);
  */
 function fizzBuzz(int $n): void
 {
+
+    // On définit les règles de FizzBuzz
     $rules = [
         3  => 'Fizz',
         5  => 'Buzz',
     ];
 
+    // On parcourt les nombres de 1 à N
     for ($i = 1; $i <= $n; $i++) {
         $output = '';
 
+        // On applique les règles de FizzBuzz
         foreach ($rules as $divisor => $word) {
             if ($i % $divisor === 0) {
                 $output .= $word;
@@ -33,4 +37,5 @@ function fizzBuzz(int $n): void
     }
 }
 
+// Test de la foncton
 fizzBuzz(15);
