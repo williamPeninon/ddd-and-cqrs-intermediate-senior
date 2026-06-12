@@ -73,7 +73,15 @@ Exemple :
 FLEET_ID=$(./bin/fleet create william)
 ./bin/fleet register-vehicle $FLEET_ID ABC-123
 ./bin/fleet localize-vehicle $FLEET_ID ABC-123 48.8566 2.3522
-./bin/fleet list-fleets user-1
+./bin/fleet list-fleets william
 ./bin/fleet list-locations $FLEET_ID
 ```
+
+## Note CQRS — pas d'event store
+
+Le CQRS complet peut s'appuyer sur une table d'événements (`events`) pour historiser chaque action d'écriture et permettre de reconstruire la base dans un état passé donné (event sourcing / replay).
+
+**Ce mécanisme n'a pas été implémenté ici.** Le projet applique un CQRS pragmatique : séparation commandes / requêtes dans le code, avec un modèle relationnel classique en persistance.
+
+C'est un choix volontaire : pour un exercice d'évaluation, je considère qu'un event store ajouterait de la complexité disproportionnée par rapport au périmètre métier.
 
